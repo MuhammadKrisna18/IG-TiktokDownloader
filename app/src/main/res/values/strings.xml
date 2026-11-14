@@ -22,6 +22,7 @@
     <string name="status_idle">Siap mengambil media</string>
     <string name="status_loading">Sedang memproses tautan…</string>
     <string name="status_downloading">Mengunduh: %1$d%%</string>
+    <string name="status_updating">Mengunduh pembaruan: %1$d%%</string>
     <string name="status_saving">Menyimpan ke Galeri…</string>
     <string name="status_success">Unduhan selesai dan tersimpan di Galeri</string>
     <string name="error_invalid_url">Tautan tidak valid atau tidak didukung</string>

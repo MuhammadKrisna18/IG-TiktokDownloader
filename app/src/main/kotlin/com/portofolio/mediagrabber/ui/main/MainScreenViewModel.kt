@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.portofolio.mediagrabber.core.notification.DownloadNotificationHelper
 import com.portofolio.mediagrabber.core.result.Resource
+import com.portofolio.mediagrabber.core.updater.AppUpdateManager
 import com.portofolio.mediagrabber.data.local.DownloadHistoryDbHelper
 import com.portofolio.mediagrabber.data.remote.NetworkModule
 import com.portofolio.mediagrabber.data.repository.AppUpdateRepositoryImpl
@@ -42,6 +43,8 @@ data class MainUiState(
     val errorMessage: String? = null,
     val updateInfo: AppUpdateInfo? = null,
     val showUpdateDialog: Boolean = false,
+    val isUpdatingApp: Boolean = false,
+    val updateProgress: Int = 0,
     val clipboardCandidateUrl: String? = null,
     val showClipboardDialog: Boolean = false,
     val currentDownload: DownloadTask? = null,
@@ -84,6 +87,10 @@ class MainScreenViewModel(
         DownloadHistoryRepositoryImpl(
             DownloadHistoryDbHelper(application.applicationContext)
         )
+    ),
+    private val appUpdateManager: AppUpdateManager = AppUpdateManager(
+        application.applicationContext,
+        NetworkModule.okHttpClient
     )
 ) : AndroidViewModel(application) {
 
@@ -271,5 +278,27 @@ class MainScreenViewModel(
 
     fun dismissUpdateDialog() {
         _uiState.update { it.copy(showUpdateDialog = false) }
+    }
+
+    fun startAppUpdate() {
+        val downloadUrl = _uiState.value.updateInfo?.apkDownloadUrl ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUpdatingApp = true, updateProgress = 0) }
+            val result = appUpdateManager.downloadAndInstallApk(
+                downloadUrl = downloadUrl,
+                onProgress = { progress ->
+                    _uiState.update { it.copy(updateProgress = progress) }
+                }
+            )
+            result.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isUpdatingApp = false,
+                        errorMessage = error.localizedMessage
+                    )
+                }
+            }
+            _uiState.update { it.copy(isUpdatingApp = false, showUpdateDialog = false) }
+        }
     }
 }

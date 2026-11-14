@@ -251,24 +251,46 @@ fun MainScreen(
     if (uiState.showUpdateDialog && uiState.updateInfo != null) {
         val info = uiState.updateInfo!!
         AlertDialog(
-            onDismissRequest = { viewModel.dismissUpdateDialog() },
+            onDismissRequest = {
+                if (!uiState.isUpdatingApp) {
+                    viewModel.dismissUpdateDialog()
+                }
+            },
             title = { Text(text = stringResource(R.string.dialog_update_title)) },
             text = {
-                Text(
-                    text = stringResource(
-                        R.string.dialog_update_message,
-                        info.latestVersionName
-                    ) + if (info.releaseNotes.isNotBlank()) "\n\n${info.releaseNotes}" else ""
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = stringResource(
+                            R.string.dialog_update_message,
+                            info.latestVersionName
+                        ) + if (info.releaseNotes.isNotBlank()) "\n\n${info.releaseNotes}" else ""
+                    )
+                    if (uiState.isUpdatingApp) {
+                        Text(
+                            text = stringResource(R.string.status_updating, uiState.updateProgress),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        LinearProgressIndicator(
+                            progress = { uiState.updateProgress / 100f },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
             },
             confirmButton = {
-                Button(onClick = { viewModel.dismissUpdateDialog() }) {
+                Button(
+                    onClick = { viewModel.startAppUpdate() },
+                    enabled = !uiState.isUpdatingApp
+                ) {
                     Text(text = stringResource(R.string.btn_update))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.dismissUpdateDialog() }) {
-                    Text(text = stringResource(R.string.btn_dismiss))
+                if (!uiState.isUpdatingApp) {
+                    TextButton(onClick = { viewModel.dismissUpdateDialog() }) {
+                        Text(text = stringResource(R.string.btn_dismiss))
+                    }
                 }
             }
         )

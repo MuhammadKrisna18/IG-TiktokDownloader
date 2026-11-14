@@ -3,6 +3,7 @@
 Android Native application built with Kotlin and Jetpack Compose to extract and download media from Instagram and TikTok.
 
 ## Architecture & Principles
+
 - **Clean Architecture**: Clear separation of concerns across `domain`, `data`, and `ui` layers.
 - **SOLID Principles**: Single responsibility UseCases, decoupled repository abstractions, and testable domain logic.
 - **Modern Android Stack**: Jetpack Compose, Material 3, Kotlin Coroutines, StateFlow, Retrofit 2, OkHttp 4, Kotlinx Serialization, Coil, Media3 ExoPlayer.
@@ -15,6 +16,7 @@ Android Native application built with Kotlin and Jetpack Compose to extract and 
 - **Deep System Integration**: Native clipboard detection, intent handling (`ACTION_SEND`) for seamless sharing from Instagram/TikTok, and Scoped Storage compatibility.
 
 ## Tech Stack
+
 - Kotlin 2.x
 - Jetpack Compose + Material 3
 - AndroidX Lifecycle & ViewModel
@@ -27,6 +29,7 @@ Android Native application built with Kotlin and Jetpack Compose to extract and 
 - JUnit 4 & Kotlinx Coroutines Test
 
 ## Project Structure
+
 ```text
 com.portofolio.mediagrabber
 ├── core
@@ -50,6 +53,7 @@ com.portofolio.mediagrabber
 ```
 
 ## Building
+
 ```bash
 ./gradlew testDebugUnitTest assembleDebug
 ```

@@ -25,13 +25,19 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
       - name: Build APK
         run: ./gradlew assembleDebug --stacktrace
+
+      - name: Prepare Release APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk MediaGrabber-${{ github.ref_name }}.apk
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/debug/app-debug.apk
+          files: MediaGrabber-${{ github.ref_name }}.apk
           name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
