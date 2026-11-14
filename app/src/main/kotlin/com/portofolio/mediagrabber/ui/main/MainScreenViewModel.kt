@@ -2,7 +2,10 @@ package com.portofolio.mediagrabber.ui.main
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.portofolio.mediagrabber.core.notification.DownloadNotificationHelper
 import com.portofolio.mediagrabber.core.result.Resource
 import com.portofolio.mediagrabber.core.updater.AppUpdateManager
@@ -54,45 +57,60 @@ data class MainUiState(
 
 class MainScreenViewModel(
     application: Application,
-    private val extractMediaUseCase: ExtractMediaUseCase = ExtractMediaUseCase(
-        MediaExtractorRepositoryImpl(
-            tikWmApiService = NetworkModule.tikWmApiService,
-            cobaltApiService = NetworkModule.cobaltApiService
-        )
-    ),
-    private val detectPlatformUseCase: DetectPlatformUseCase = DetectPlatformUseCase(),
-    private val checkAppUpdateUseCase: CheckAppUpdateUseCase = CheckAppUpdateUseCase(
-        AppUpdateRepositoryImpl(
-            apiService = NetworkModule.githubReleaseApiService
-        )
-    ),
-    private val downloadMediaUseCase: DownloadMediaUseCase = DownloadMediaUseCase(
-        MediaDownloaderRepositoryImpl(
-            okHttpClient = NetworkModule.okHttpClient,
-            mediaStoreHelper = MediaStoreHelper(application.applicationContext),
-            notificationHelper = DownloadNotificationHelper(application.applicationContext)
-        )
-    ),
-    private val getDownloadHistoryUseCase: GetDownloadHistoryUseCase = GetDownloadHistoryUseCase(
-        DownloadHistoryRepositoryImpl(
-            DownloadHistoryDbHelper(application.applicationContext)
-        )
-    ),
-    private val saveDownloadHistoryUseCase: SaveDownloadHistoryUseCase = SaveDownloadHistoryUseCase(
-        DownloadHistoryRepositoryImpl(
-            DownloadHistoryDbHelper(application.applicationContext)
-        )
-    ),
-    private val deleteDownloadHistoryUseCase: DeleteDownloadHistoryUseCase = DeleteDownloadHistoryUseCase(
-        DownloadHistoryRepositoryImpl(
-            DownloadHistoryDbHelper(application.applicationContext)
-        )
-    ),
-    private val appUpdateManager: AppUpdateManager = AppUpdateManager(
-        application.applicationContext,
-        NetworkModule.okHttpClient
-    )
+    private val extractMediaUseCase: ExtractMediaUseCase,
+    private val detectPlatformUseCase: DetectPlatformUseCase,
+    private val checkAppUpdateUseCase: CheckAppUpdateUseCase,
+    private val downloadMediaUseCase: DownloadMediaUseCase,
+    private val getDownloadHistoryUseCase: GetDownloadHistoryUseCase,
+    private val saveDownloadHistoryUseCase: SaveDownloadHistoryUseCase,
+    private val deleteDownloadHistoryUseCase: DeleteDownloadHistoryUseCase,
+    private val appUpdateManager: AppUpdateManager
 ) : AndroidViewModel(application) {
+
+    constructor(application: Application) : this(
+        application = application,
+        extractMediaUseCase = ExtractMediaUseCase(
+            MediaExtractorRepositoryImpl(
+                tikWmApiService = NetworkModule.tikWmApiService,
+                cobaltApiService = NetworkModule.cobaltApiService
+            )
+        ),
+        detectPlatformUseCase = DetectPlatformUseCase(),
+        checkAppUpdateUseCase = CheckAppUpdateUseCase(
+            AppUpdateRepositoryImpl(
+                apiService = NetworkModule.githubReleaseApiService
+            )
+        ),
+        downloadMediaUseCase = DownloadMediaUseCase(
+            MediaDownloaderRepositoryImpl(
+                okHttpClient = NetworkModule.okHttpClient,
+                mediaStoreHelper = MediaStoreHelper(application.applicationContext),
+                notificationHelper = DownloadNotificationHelper(application.applicationContext)
+            )
+        ),
+        getDownloadHistoryUseCase = GetDownloadHistoryUseCase(
+            DownloadHistoryRepositoryImpl.getInstance(application.applicationContext)
+        ),
+        saveDownloadHistoryUseCase = SaveDownloadHistoryUseCase(
+            DownloadHistoryRepositoryImpl.getInstance(application.applicationContext)
+        ),
+        deleteDownloadHistoryUseCase = DeleteDownloadHistoryUseCase(
+            DownloadHistoryRepositoryImpl.getInstance(application.applicationContext)
+        ),
+        appUpdateManager = AppUpdateManager(
+            application.applicationContext,
+            NetworkModule.okHttpClient
+        )
+    )
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as Application
+                MainScreenViewModel(app)
+            }
+        }
+    }
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()

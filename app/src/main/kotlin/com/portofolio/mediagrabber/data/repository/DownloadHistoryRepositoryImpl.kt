@@ -1,5 +1,6 @@
 package com.portofolio.mediagrabber.data.repository
 
+import android.content.Context
 import com.portofolio.mediagrabber.data.local.DownloadHistoryDbHelper
 import com.portofolio.mediagrabber.domain.model.DownloadedMedia
 import com.portofolio.mediagrabber.domain.repository.DownloadHistoryRepository
@@ -20,7 +21,9 @@ class DownloadHistoryRepositoryImpl(
     }
 
     private fun refresh() {
-        _historyFlow.value = dbHelper.getAll()
+        runCatching {
+            _historyFlow.value = dbHelper.getAll()
+        }
     }
 
     override fun getAllHistory(): Flow<List<DownloadedMedia>> {
@@ -36,5 +39,18 @@ class DownloadHistoryRepositoryImpl(
     override suspend fun deleteHistory(id: String): Unit = withContext(Dispatchers.IO) {
         dbHelper.delete(id)
         refresh()
+    }
+
+    companion object {
+        @Volatile
+        private var instance: DownloadHistoryRepositoryImpl? = null
+
+        fun getInstance(context: Context): DownloadHistoryRepositoryImpl {
+            return instance ?: synchronized(this) {
+                instance ?: DownloadHistoryRepositoryImpl(
+                    DownloadHistoryDbHelper(context.applicationContext)
+                ).also { instance = it }
+            }
+        }
     }
 }

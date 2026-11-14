@@ -31,7 +31,7 @@ class DownloadHistoryDbHelper(context: Context) : SQLiteOpenHelper(context, DATA
         onCreate(db)
     }
 
-    fun insert(item: DownloadedMedia): Long {
+    fun insert(item: DownloadedMedia): Long = runCatching {
         val db = writableDatabase
         val values = ContentValues().apply {
             put(COLUMN_ID, item.id)
@@ -43,15 +43,15 @@ class DownloadHistoryDbHelper(context: Context) : SQLiteOpenHelper(context, DATA
             put(COLUMN_FILENAME, item.filename)
             put(COLUMN_DOWNLOADED_AT, item.downloadedAt)
         }
-        return db.insertWithOnConflict(TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE)
-    }
+        db.insertWithOnConflict(TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE)
+    }.getOrDefault(-1L)
 
-    fun delete(id: String): Int {
+    fun delete(id: String): Int = runCatching {
         val db = writableDatabase
-        return db.delete(TABLE_NAME, "$COLUMN_ID = ?", arrayOf(id))
-    }
+        db.delete(TABLE_NAME, "$COLUMN_ID = ?", arrayOf(id))
+    }.getOrDefault(0)
 
-    fun getAll(): List<DownloadedMedia> {
+    fun getAll(): List<DownloadedMedia> = runCatching {
         val list = mutableListOf<DownloadedMedia>()
         val db = readableDatabase
         val cursor = db.query(
@@ -90,8 +90,8 @@ class DownloadHistoryDbHelper(context: Context) : SQLiteOpenHelper(context, DATA
                 )
             }
         }
-        return list
-    }
+        list
+    }.getOrDefault(emptyList())
 
     companion object {
         private const val DATABASE_NAME = "mediagrabber.db"

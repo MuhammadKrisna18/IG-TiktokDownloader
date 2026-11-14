@@ -94,7 +94,7 @@ import com.portofolio.mediagrabber.ui.player.VideoPlayerDialog
 @Composable
 fun MainScreen(
     modifier: Modifier = Modifier,
-    viewModel: MainScreenViewModel = viewModel()
+    viewModel: MainScreenViewModel = viewModel(factory = MainScreenViewModel.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -103,12 +103,14 @@ fun MainScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = clipboard.primaryClip
-                if (clip != null && clip.itemCount > 0) {
-                    val text = clip.getItemAt(0).text?.toString() ?: ""
-                    if (text.isNotBlank()) {
-                        viewModel.onClipboardUrlDetected(text)
+                runCatching {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                    val clip = clipboard?.primaryClip
+                    if (clip != null && clip.itemCount > 0) {
+                        val text = clip.getItemAt(0).text?.toString() ?: ""
+                        if (text.isNotBlank()) {
+                            viewModel.onClipboardUrlDetected(text)
+                        }
                     }
                 }
             }

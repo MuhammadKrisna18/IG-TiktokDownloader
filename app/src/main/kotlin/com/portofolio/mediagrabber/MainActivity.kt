@@ -11,12 +11,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.portofolio.mediagrabber.core.util.UrlExtractor
+import com.portofolio.mediagrabber.ui.main.MainScreen
 import com.portofolio.mediagrabber.ui.main.MainScreenViewModel
 import com.portofolio.mediagrabber.ui.theme.MediaGrabberTheme
 
 class MainActivity : ComponentActivity() {
 
-    private val viewModel: MainScreenViewModel by viewModels()
+    private val viewModel: MainScreenViewModel by viewModels { MainScreenViewModel.Factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,7 +30,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainNavigation()
+                    MainScreen(viewModel = viewModel)
                 }
             }
         }
