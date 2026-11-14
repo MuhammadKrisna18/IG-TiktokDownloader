@@ -22,15 +22,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -43,6 +45,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -50,6 +54,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,8 +63,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -78,6 +87,26 @@ fun MainScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = clipboard.primaryClip
+                if (clip != null && clip.itemCount > 0) {
+                    val text = clip.getItemAt(0).text?.toString() ?: ""
+                    if (text.isNotBlank()) {
+                        viewModel.onClipboardUrlDetected(text)
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -102,109 +131,87 @@ fun MainScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                NavigationBarItem(
+                    selected = uiState.selectedTab == 0,
+                    onClick = { viewModel.onTabSelected(0) },
+                    icon = { Icon(Icons.Default.Download, contentDescription = null) },
+                    label = { Text(text = stringResource(R.string.tab_download)) }
+                )
+                NavigationBarItem(
+                    selected = uiState.selectedTab == 1,
+                    onClick = { viewModel.onTabSelected(1) },
+                    icon = { Icon(Icons.Default.History, contentDescription = null) },
+                    label = { Text(text = stringResource(R.string.tab_history)) }
+                )
+            }
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
-
-            UrlInputSection(
-                url = uiState.inputUrl,
-                onUrlChange = viewModel::onUrlChanged,
-                onClear = viewModel::onClearUrl,
-                onPaste = {
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    val clip = clipboard.primaryClip
-                    if (clip != null && clip.itemCount > 0) {
-                        val text = clip.getItemAt(0).text?.toString() ?: ""
-                        viewModel.onUrlChanged(text)
-                    }
-                }
-            )
-
-            PlatformBadge(platform = uiState.detectedPlatform)
-
-            Button(
-                onClick = { viewModel.fetchMedia() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                enabled = uiState.inputUrl.isNotBlank() && !uiState.isLoading,
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                if (uiState.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.5.dp
-                    )
-                } else {
-                    Icon(imageVector = Icons.Default.Download, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.btn_fetch),
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-            }
-
-            AnimatedVisibility(visible = uiState.errorMessage != null) {
-                uiState.errorMessage?.let { errorText ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            text = errorText,
-                            modifier = Modifier.padding(16.dp),
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-            }
-
-            AnimatedVisibility(visible = uiState.currentDownload != null) {
-                uiState.currentDownload?.let { task ->
-                    DownloadProgressCard(
-                        task = task,
-                        onCancel = viewModel::cancelDownload,
-                        onDismiss = viewModel::dismissDownloadProgress,
-                        onOpenInGallery = {
-                            task.destinationUri?.let { uriString ->
-                                val intent = Intent(Intent.ACTION_VIEW).apply {
-                                    setDataAndType(Uri.parse(uriString), "video/*")
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                runCatching { context.startActivity(intent) }
-                            }
+            if (uiState.selectedTab == 0) {
+                DownloadTabContent(
+                    uiState = uiState,
+                    onUrlChange = viewModel::onUrlChanged,
+                    onClearUrl = viewModel::onClearUrl,
+                    onPasteUrl = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = clipboard.primaryClip
+                        if (clip != null && clip.itemCount > 0) {
+                            val text = clip.getItemAt(0).text?.toString() ?: ""
+                            viewModel.onUrlChanged(text)
                         }
-                    )
-                }
+                    },
+                    onFetchMedia = viewModel::fetchMedia,
+                    onDownloadOptionSelected = viewModel::startDownload,
+                    onCancelDownload = viewModel::cancelDownload,
+                    onDismissDownload = viewModel::dismissDownloadProgress,
+                    onOpenInGallery = { uriString ->
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(Uri.parse(uriString), "video/*")
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        runCatching { context.startActivity(intent) }
+                    }
+                )
+            } else {
+                HistoryTabContent()
             }
-
-            AnimatedVisibility(visible = uiState.mediaItem != null) {
-                uiState.mediaItem?.let { item ->
-                    MediaPreviewCard(
-                        mediaItem = item,
-                        onDownloadOptionSelected = viewModel::startDownload
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+
+    if (uiState.showClipboardDialog && uiState.clipboardCandidateUrl != null) {
+        val detectedUrl = uiState.clipboardCandidateUrl!!
+        AlertDialog(
+            onDismissRequest = { viewModel.onDismissClipboardDialog() },
+            title = { Text(text = stringResource(R.string.dialog_clipboard_title)) },
+            text = {
+                Text(
+                    text = stringResource(
+                        R.string.dialog_clipboard_message,
+                        detectedUrl
+                    )
+                )
+            },
+            confirmButton = {
+                Button(onClick = { viewModel.onAcceptClipboardUrl() }) {
+                    Text(text = stringResource(R.string.btn_paste_and_fetch))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onDismissClipboardDialog() }) {
+                    Text(text = stringResource(R.string.btn_ignore))
+                }
+            }
+        )
     }
 
     if (uiState.showUpdateDialog && uiState.updateInfo != null) {
@@ -231,6 +238,140 @@ fun MainScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun DownloadTabContent(
+    uiState: MainUiState,
+    onUrlChange: (String) -> Unit,
+    onClearUrl: () -> Unit,
+    onPasteUrl: () -> Unit,
+    onFetchMedia: () -> Unit,
+    onDownloadOptionSelected: (DownloadOption) -> Unit,
+    onCancelDownload: () -> Unit,
+    onDismissDownload: () -> Unit,
+    onOpenInGallery: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Spacer(modifier = Modifier.height(8.dp))
+
+        UrlInputSection(
+            url = uiState.inputUrl,
+            onUrlChange = onUrlChange,
+            onClear = onClearUrl,
+            onPaste = onPasteUrl
+        )
+
+        PlatformBadge(platform = uiState.detectedPlatform)
+
+        Button(
+            onClick = onFetchMedia,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            enabled = uiState.inputUrl.isNotBlank() && !uiState.isLoading,
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            if (uiState.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    strokeWidth = 2.5.dp
+                )
+            } else {
+                Icon(imageVector = Icons.Default.Download, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.btn_fetch),
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+        }
+
+        AnimatedVisibility(visible = uiState.errorMessage != null) {
+            uiState.errorMessage?.let { errorText ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = errorText,
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+
+        AnimatedVisibility(visible = uiState.currentDownload != null) {
+            uiState.currentDownload?.let { task ->
+                DownloadProgressCard(
+                    task = task,
+                    onCancel = onCancelDownload,
+                    onDismiss = onDismissDownload,
+                    onOpenInGallery = {
+                        task.destinationUri?.let { onOpenInGallery(it) }
+                    }
+                )
+            }
+        }
+
+        AnimatedVisibility(visible = uiState.mediaItem != null) {
+            uiState.mediaItem?.let { item ->
+                MediaPreviewCard(
+                    mediaItem = item,
+                    onDownloadOptionSelected = onDownloadOptionSelected
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun HistoryTabContent() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.VideoLibrary,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+            )
+            Text(
+                text = stringResource(R.string.history_empty_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = stringResource(R.string.history_empty_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 

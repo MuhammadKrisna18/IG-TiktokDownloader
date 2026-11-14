@@ -11,6 +11,8 @@
     <string name="btn_open_gallery">Buka di Galeri</string>
     <string name="btn_update">Perbarui Aplikasi</string>
     <string name="btn_dismiss">Nanti</string>
+    <string name="btn_paste_and_fetch">Tempel &amp; Ambil</string>
+    <string name="btn_ignore">Abaikan</string>
     <string name="label_platform_tiktok">TikTok</string>
     <string name="label_platform_instagram">Instagram</string>
     <string name="label_platform_unknown">Tidak Dikenal</string>
@@ -26,6 +28,10 @@
     <string name="error_generic">Terjadi kesalahan. Silakan coba lagi</string>
     <string name="dialog_update_title">Pembaruan Tersedia</string>
     <string name="dialog_update_message">Versi baru (%1$s) telah tersedia. Unduh dan perbarui sekarang?</string>
+    <string name="dialog_clipboard_title">Tautan Terdeteksi</string>
+    <string name="dialog_clipboard_message">Tautan %1$s terdeteksi di papan klip. Ingin langsung mengambil media ini?</string>
+    <string name="history_empty_title">Belum Ada Riwayat Unduhan</string>
+    <string name="history_empty_desc">Video yang Anda unduh akan tersimpan di Galeri HP dan dicatat di sini.</string>
     <string name="notification_channel_name">Unduhan Media</string>
     <string name="notification_channel_desc">Status proses unduhan video ke galeri</string>
     <string name="notification_title_downloading">Sedang Mengunduh</string>

@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class MainUiState(
+    val selectedTab: Int = 0,
     val inputUrl: String = "",
     val detectedPlatform: PlatformType = PlatformType.UNKNOWN,
     val isLoading: Boolean = false,
@@ -35,6 +36,8 @@ data class MainUiState(
     val errorMessage: String? = null,
     val updateInfo: AppUpdateInfo? = null,
     val showUpdateDialog: Boolean = false,
+    val clipboardCandidateUrl: String? = null,
+    val showClipboardDialog: Boolean = false,
     val currentDownload: DownloadTask? = null
 )
 
@@ -65,9 +68,14 @@ class MainScreenViewModel(
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     private var downloadJob: Job? = null
+    private var lastHandledClipboard: String? = null
 
     init {
         checkForUpdate()
+    }
+
+    fun onTabSelected(index: Int) {
+        _uiState.update { it.copy(selectedTab = index) }
     }
 
     fun onUrlChanged(url: String) {
@@ -88,6 +96,42 @@ class MainScreenViewModel(
                 detectedPlatform = PlatformType.UNKNOWN,
                 mediaItem = null,
                 errorMessage = null
+            )
+        }
+    }
+
+    fun onClipboardUrlDetected(rawClipboardText: String) {
+        val trimmed = rawClipboardText.trim()
+        val platform = detectPlatformUseCase(trimmed)
+        if (platform != PlatformType.UNKNOWN && trimmed != lastHandledClipboard && trimmed != _uiState.value.inputUrl) {
+            lastHandledClipboard = trimmed
+            _uiState.update {
+                it.copy(
+                    clipboardCandidateUrl = trimmed,
+                    showClipboardDialog = true
+                )
+            }
+        }
+    }
+
+    fun onAcceptClipboardUrl() {
+        val candidate = _uiState.value.clipboardCandidateUrl ?: return
+        _uiState.update {
+            it.copy(
+                inputUrl = candidate,
+                detectedPlatform = detectPlatformUseCase(candidate),
+                showClipboardDialog = false,
+                clipboardCandidateUrl = null
+            )
+        }
+        fetchMedia()
+    }
+
+    fun onDismissClipboardDialog() {
+        _uiState.update {
+            it.copy(
+                showClipboardDialog = false,
+                clipboardCandidateUrl = null
             )
         }
     }
