@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">MediaGrabber</string>
+    <string name="tab_download">Unduh</string>
+    <string name="tab_history">Riwayat</string>
+    <string name="input_placeholder">Tempel tautan TikTok atau Instagram…</string>
+    <string name="btn_paste">Tempel</string>
+    <string name="btn_clear">Hapus</string>
+    <string name="btn_fetch">Ambil Video</string>
+    <string name="btn_download">Unduh Sekarang</string>
+    <string name="btn_update">Perbarui Aplikasi</string>
+    <string name="btn_dismiss">Nanti</string>
+    <string name="label_platform_tiktok">TikTok</string>
+    <string name="label_platform_instagram">Instagram</string>
+    <string name="label_platform_unknown">Tidak Dikenal</string>
+    <string name="status_idle">Siap mengambil media</string>
+    <string name="status_loading">Sedang memproses tautan…</string>
+    <string name="status_downloading">Sedang mengunduh…</string>
+    <string name="status_success">Unduhan selesai dan tersimpan di Galeri</string>
+    <string name="error_invalid_url">Tautan tidak valid atau tidak didukung</string>
+    <string name="error_network">Gagal terhubung ke server, periksa koneksi internet</string>
+    <string name="error_extraction_failed">Gagal mengekstrak media dari tautan ini</string>
+    <string name="error_generic">Terjadi kesalahan. Silakan coba lagi</string>
+    <string name="dialog_update_title">Pembaruan Tersedia</string>
+    <string name="dialog_update_message">Versi baru (%1$s) telah tersedia. Unduh dan perbarui sekarang?</string>
+</resources>
