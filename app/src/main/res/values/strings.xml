@@ -7,6 +7,8 @@
     <string name="btn_clear">Hapus</string>
     <string name="btn_fetch">Ambil Video</string>
     <string name="btn_download">Unduh Sekarang</string>
+    <string name="btn_cancel">Batal</string>
+    <string name="btn_open_gallery">Buka di Galeri</string>
     <string name="btn_update">Perbarui Aplikasi</string>
     <string name="btn_dismiss">Nanti</string>
     <string name="label_platform_tiktok">TikTok</string>
@@ -14,12 +16,19 @@
     <string name="label_platform_unknown">Tidak Dikenal</string>
     <string name="status_idle">Siap mengambil media</string>
     <string name="status_loading">Sedang memproses tautan…</string>
-    <string name="status_downloading">Sedang mengunduh…</string>
+    <string name="status_downloading">Mengunduh: %1$d%%</string>
+    <string name="status_saving">Menyimpan ke Galeri…</string>
     <string name="status_success">Unduhan selesai dan tersimpan di Galeri</string>
     <string name="error_invalid_url">Tautan tidak valid atau tidak didukung</string>
     <string name="error_network">Gagal terhubung ke server, periksa koneksi internet</string>
     <string name="error_extraction_failed">Gagal mengekstrak media dari tautan ini</string>
+    <string name="error_download_failed">Gagal mengunduh file media</string>
     <string name="error_generic">Terjadi kesalahan. Silakan coba lagi</string>
     <string name="dialog_update_title">Pembaruan Tersedia</string>
     <string name="dialog_update_message">Versi baru (%1$s) telah tersedia. Unduh dan perbarui sekarang?</string>
+    <string name="notification_channel_name">Unduhan Media</string>
+    <string name="notification_channel_desc">Status proses unduhan video ke galeri</string>
+    <string name="notification_title_downloading">Sedang Mengunduh</string>
+    <string name="notification_title_complete">Unduhan Selesai</string>
+    <string name="notification_title_failed">Unduhan Gagal</string>
 </resources>

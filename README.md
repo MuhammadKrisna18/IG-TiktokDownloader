@@ -6,6 +6,7 @@ Android Native application built with Kotlin and Jetpack Compose to extract and 
 - **Clean Architecture**: Clear separation of concerns across `domain`, `data`, and `ui` layers.
 - **SOLID Principles**: Focused UseCases, repository contracts, and decoupled data sources.
 - **Modern Android Stack**: Jetpack Compose, Material 3, Kotlin Coroutines, StateFlow, Retrofit 2, Coil, Media3 ExoPlayer.
+- **Download Engine & MediaStore**: Direct streaming of high-quality MP4/media into Android MediaStore (`Movies/MediaGrabber`), compatible with Scoped Storage (Android 10+), with real-time download notifications and progress tracking.
 - **In-App Auto Update**: Automatic release checking against GitHub Releases with direct in-app APK installer.
 - **Deep System Integration**: Native clipboard detection, intent handling (`ACTION_SEND`) for seamless sharing from Instagram/TikTok, and Scoped Storage compatibility.
 
@@ -14,6 +15,8 @@ Android Native application built with Kotlin and Jetpack Compose to extract and 
 - Jetpack Compose + Material 3
 - AndroidX Lifecycle & ViewModel
 - Retrofit 2 + OkHttp + Kotlinx Serialization
+- Android MediaStore API (Scoped Storage)
+- Android Notifications (Channels, Progress)
 - Coil Compose
 - AndroidX Media3 (ExoPlayer)
 - JUnit & Kotlinx Coroutines Test
@@ -22,6 +25,7 @@ Android Native application built with Kotlin and Jetpack Compose to extract and 
 ```text
 com.portofolio.mediagrabber
 ├── core
+│   ├── notification
 │   ├── result
 │   └── updater
 ├── domain
@@ -30,7 +34,8 @@ com.portofolio.mediagrabber
 │   └── usecase
 ├── data
 │   ├── remote
-│   └── repository
+│   ├── repository
+│   └── storage
 └── ui
     ├── main
     └── theme
