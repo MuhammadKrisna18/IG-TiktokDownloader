@@ -61,6 +61,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,6 +81,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.portofolio.mediagrabber.R
+import com.portofolio.mediagrabber.core.util.UrlExtractor
 import com.portofolio.mediagrabber.domain.model.DownloadOption
 import com.portofolio.mediagrabber.domain.model.DownloadStatus
 import com.portofolio.mediagrabber.domain.model.DownloadTask
@@ -173,7 +177,8 @@ fun MainScreen(
                         val clip = clipboard.primaryClip
                         if (clip != null && clip.itemCount > 0) {
                             val text = clip.getItemAt(0).text?.toString() ?: ""
-                            viewModel.onUrlChanged(text)
+                            val cleanUrl = UrlExtractor.extractUrl(text)
+                            viewModel.onUrlChanged(cleanUrl)
                         }
                     },
                     onFetchMedia = viewModel::fetchMedia,
@@ -377,6 +382,31 @@ private fun HistoryTabContent(
     onShare: (DownloadedMedia) -> Unit,
     onDelete: (String) -> Unit
 ) {
+    var candidateIdToDelete by remember { mutableStateOf<String?>(null) }
+
+    if (candidateIdToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { candidateIdToDelete = null },
+            title = { Text(text = stringResource(R.string.dialog_delete_title)) },
+            text = { Text(text = stringResource(R.string.dialog_delete_message)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        candidateIdToDelete?.let(onDelete)
+                        candidateIdToDelete = null
+                    }
+                ) {
+                    Text(text = stringResource(R.string.btn_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { candidateIdToDelete = null }) {
+                    Text(text = stringResource(R.string.btn_cancel))
+                }
+            }
+        )
+    }
+
     if (historyList.isEmpty()) {
         Box(
             modifier = Modifier
@@ -419,7 +449,7 @@ private fun HistoryTabContent(
                     item = item,
                     onPlay = { onPlay(item) },
                     onShare = { onShare(item) },
-                    onDelete = { onDelete(item.id) }
+                    onDelete = { candidateIdToDelete = item.id }
                 )
             }
         }
