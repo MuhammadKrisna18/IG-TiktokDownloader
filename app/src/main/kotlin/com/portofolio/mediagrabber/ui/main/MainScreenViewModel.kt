@@ -5,8 +5,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.portofolio.mediagrabber.core.notification.DownloadNotificationHelper
 import com.portofolio.mediagrabber.core.result.Resource
+import com.portofolio.mediagrabber.data.local.DownloadHistoryDbHelper
 import com.portofolio.mediagrabber.data.remote.NetworkModule
 import com.portofolio.mediagrabber.data.repository.AppUpdateRepositoryImpl
+import com.portofolio.mediagrabber.data.repository.DownloadHistoryRepositoryImpl
 import com.portofolio.mediagrabber.data.repository.MediaDownloaderRepositoryImpl
 import com.portofolio.mediagrabber.data.repository.MediaExtractorRepositoryImpl
 import com.portofolio.mediagrabber.data.storage.MediaStoreHelper
@@ -14,12 +16,16 @@ import com.portofolio.mediagrabber.domain.model.AppUpdateInfo
 import com.portofolio.mediagrabber.domain.model.DownloadOption
 import com.portofolio.mediagrabber.domain.model.DownloadStatus
 import com.portofolio.mediagrabber.domain.model.DownloadTask
+import com.portofolio.mediagrabber.domain.model.DownloadedMedia
 import com.portofolio.mediagrabber.domain.model.MediaItem
 import com.portofolio.mediagrabber.domain.model.PlatformType
 import com.portofolio.mediagrabber.domain.usecase.CheckAppUpdateUseCase
+import com.portofolio.mediagrabber.domain.usecase.DeleteDownloadHistoryUseCase
 import com.portofolio.mediagrabber.domain.usecase.DetectPlatformUseCase
 import com.portofolio.mediagrabber.domain.usecase.DownloadMediaUseCase
 import com.portofolio.mediagrabber.domain.usecase.ExtractMediaUseCase
+import com.portofolio.mediagrabber.domain.usecase.GetDownloadHistoryUseCase
+import com.portofolio.mediagrabber.domain.usecase.SaveDownloadHistoryUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,7 +44,9 @@ data class MainUiState(
     val showUpdateDialog: Boolean = false,
     val clipboardCandidateUrl: String? = null,
     val showClipboardDialog: Boolean = false,
-    val currentDownload: DownloadTask? = null
+    val currentDownload: DownloadTask? = null,
+    val historyList: List<DownloadedMedia> = emptyList(),
+    val activePlayingMedia: DownloadedMedia? = null
 )
 
 class MainScreenViewModel(
@@ -61,6 +69,21 @@ class MainScreenViewModel(
             mediaStoreHelper = MediaStoreHelper(application.applicationContext),
             notificationHelper = DownloadNotificationHelper(application.applicationContext)
         )
+    ),
+    private val getDownloadHistoryUseCase: GetDownloadHistoryUseCase = GetDownloadHistoryUseCase(
+        DownloadHistoryRepositoryImpl(
+            DownloadHistoryDbHelper(application.applicationContext)
+        )
+    ),
+    private val saveDownloadHistoryUseCase: SaveDownloadHistoryUseCase = SaveDownloadHistoryUseCase(
+        DownloadHistoryRepositoryImpl(
+            DownloadHistoryDbHelper(application.applicationContext)
+        )
+    ),
+    private val deleteDownloadHistoryUseCase: DeleteDownloadHistoryUseCase = DeleteDownloadHistoryUseCase(
+        DownloadHistoryRepositoryImpl(
+            DownloadHistoryDbHelper(application.applicationContext)
+        )
     )
 ) : AndroidViewModel(application) {
 
@@ -72,6 +95,15 @@ class MainScreenViewModel(
 
     init {
         checkForUpdate()
+        observeHistory()
+    }
+
+    private fun observeHistory() {
+        viewModelScope.launch {
+            getDownloadHistoryUseCase().collect { history ->
+                _uiState.update { it.copy(historyList = history) }
+            }
+        }
     }
 
     fun onTabSelected(index: Int) {
@@ -173,6 +205,19 @@ class MainScreenViewModel(
         downloadJob = viewModelScope.launch {
             downloadMediaUseCase(media, option).collect { task ->
                 _uiState.update { it.copy(currentDownload = task) }
+                if (task.status == DownloadStatus.COMPLETED && task.destinationUri != null) {
+                    saveDownloadHistoryUseCase(
+                        DownloadedMedia(
+                            id = task.id,
+                            title = media.title,
+                            author = media.author,
+                            coverUrl = media.coverUrl,
+                            platform = media.platform,
+                            contentUri = task.destinationUri,
+                            filename = task.filename
+                        )
+                    )
+                }
             }
         }
     }
@@ -194,6 +239,20 @@ class MainScreenViewModel(
 
     fun dismissDownloadProgress() {
         _uiState.update { it.copy(currentDownload = null) }
+    }
+
+    fun playVideo(media: DownloadedMedia) {
+        _uiState.update { it.copy(activePlayingMedia = media) }
+    }
+
+    fun dismissPlayer() {
+        _uiState.update { it.copy(activePlayingMedia = null) }
+    }
+
+    fun deleteDownloadedMedia(id: String) {
+        viewModelScope.launch {
+            deleteDownloadHistoryUseCase(id)
+        }
     }
 
     fun checkForUpdate() {

@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -18,6 +19,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -27,10 +30,12 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.AlertDialog
@@ -76,8 +81,10 @@ import com.portofolio.mediagrabber.R
 import com.portofolio.mediagrabber.domain.model.DownloadOption
 import com.portofolio.mediagrabber.domain.model.DownloadStatus
 import com.portofolio.mediagrabber.domain.model.DownloadTask
+import com.portofolio.mediagrabber.domain.model.DownloadedMedia
 import com.portofolio.mediagrabber.domain.model.MediaItem
 import com.portofolio.mediagrabber.domain.model.PlatformType
+import com.portofolio.mediagrabber.ui.player.VideoPlayerDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -183,9 +190,31 @@ fun MainScreen(
                     }
                 )
             } else {
-                HistoryTabContent()
+                HistoryTabContent(
+                    historyList = uiState.historyList,
+                    onPlay = viewModel::playVideo,
+                    onDelete = viewModel::deleteDownloadedMedia,
+                    onShare = { media ->
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = "video/*"
+                            putExtra(Intent.EXTRA_STREAM, Uri.parse(media.contentUri))
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        runCatching {
+                            context.startActivity(Intent.createChooser(intent, media.title))
+                        }
+                    }
+                )
             }
         }
+    }
+
+    uiState.activePlayingMedia?.let { media ->
+        VideoPlayerDialog(
+            contentUri = media.contentUri,
+            title = media.title,
+            onDismiss = viewModel::dismissPlayer
+        )
     }
 
     if (uiState.showClipboardDialog && uiState.clipboardCandidateUrl != null) {
@@ -342,35 +371,135 @@ private fun DownloadTabContent(
 }
 
 @Composable
-private fun HistoryTabContent() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+private fun HistoryTabContent(
+    historyList: List<DownloadedMedia>,
+    onPlay: (DownloadedMedia) -> Unit,
+    onShare: (DownloadedMedia) -> Unit,
+    onDelete: (String) -> Unit
+) {
+    if (historyList.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.VideoLibrary,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                )
+                Text(
+                    text = stringResource(R.string.history_empty_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = stringResource(R.string.history_empty_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.VideoLibrary,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-            )
-            Text(
-                text = stringResource(R.string.history_empty_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = stringResource(R.string.history_empty_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
+            items(historyList, key = { it.id }) { item ->
+                HistoryItemCard(
+                    item = item,
+                    onPlay = { onPlay(item) },
+                    onShare = { onShare(item) },
+                    onDelete = { onDelete(item.id) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryItemCard(
+    item: DownloadedMedia,
+    onPlay: () -> Unit,
+    onShare: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surface),
+                contentAlignment = Alignment.Center
+            ) {
+                if (item.coverUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = item.coverUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.VideoLibrary,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = item.author,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    IconButton(onClick = onPlay, modifier = Modifier.size(36.dp)) {
+                        Icon(imageVector = Icons.Default.PlayArrow, contentDescription = stringResource(R.string.btn_play))
+                    }
+                    IconButton(onClick = onShare, modifier = Modifier.size(36.dp)) {
+                        Icon(imageVector = Icons.Default.Share, contentDescription = stringResource(R.string.btn_share))
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                        Icon(imageVector = Icons.Default.Delete, contentDescription = stringResource(R.string.btn_delete))
+                    }
+                }
+            }
         }
     }
 }
